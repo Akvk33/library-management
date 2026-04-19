@@ -1,0 +1,6 @@
+flask
+mongoengine
+python-dotenv
+gunicorn
+flask-cors
+werkzeug
