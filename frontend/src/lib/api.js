@@ -1,5 +1,5 @@
   const SESSION_USER_KEY = "leafshelf_session_user";
-  const API ="https://library-management-jy5z.onrender.com/";
+  const API ="https://library-management-jy5z.onrender.com";
 
   console.log("ENV:", import.meta.env);
 console.log("API:", import.meta.env.VITE_API_URL);
