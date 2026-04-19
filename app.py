@@ -7,6 +7,7 @@ from user import userBp
 from role import roleBp
 from book import bookBp
 from borrow import borrowBp
+from flask_cors import CORS
 
 app=Flask(__name__)
 
@@ -30,6 +31,14 @@ try:
         print("MongoDB error:", e)
 except Exception as e:
     print(f"Error: {str(e)}")
+
+CORS(
+    app,
+    supports_credentials=True,
+    origins=[
+        "https://library-management-1-5913.onrender.com"
+    ]
+)
 
 app.register_blueprint(authBp)
 app.register_blueprint(userBp)
