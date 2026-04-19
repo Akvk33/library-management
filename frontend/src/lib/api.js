@@ -1,7 +1,12 @@
   const SESSION_USER_KEY = "leafshelf_session_user";
-   const API =
-  import.meta.env.VITE_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:5000";
+  const API =
+  typeof import.meta !== "undefined" &&
+  import.meta.env &&
+  import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/$/, "")
+    : "http://localhost:5000";
+
+    console.log(API);
  
 
   async function request(path, options = {}) {
