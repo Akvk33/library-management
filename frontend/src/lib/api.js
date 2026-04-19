@@ -1,10 +1,5 @@
   const SESSION_USER_KEY = "leafshelf_session_user";
-  const API =
-  typeof import.meta !== "undefined" &&
-  import.meta.env &&
-  import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/$/, "")
-    : "http://localhost:5000";
+  const API ="https://library-management-jy5z.onrender.com/";
 
   console.log("ENV:", import.meta.env);
 console.log("API:", import.meta.env.VITE_API_URL);
