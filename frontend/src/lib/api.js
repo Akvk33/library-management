@@ -6,7 +6,8 @@
     ? import.meta.env.VITE_API_URL.replace(/\/$/, "")
     : "http://localhost:5000";
 
-    console.log(API);
+  console.log("ENV:", import.meta.env);
+console.log("API:", import.meta.env.VITE_API_URL);
  
 
   async function request(path, options = {}) {
