@@ -40,6 +40,11 @@ CORS(
     ]
 )
 
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",  
+    SESSION_COOKIE_SECURE=True, 
+)
+
 app.register_blueprint(authBp)
 app.register_blueprint(userBp)
 app.register_blueprint(roleBp)
