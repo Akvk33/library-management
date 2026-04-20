@@ -42,7 +42,7 @@ CORS(
 
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",  
-    SESSION_COOKIE_SECURE=True, 
+    SESSION_COOKIE_SECURE=True,     
      SESSION_COOKIE_DOMAIN="https://library-management-jy5z.onrender.com/"
 )
 
