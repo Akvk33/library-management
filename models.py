@@ -48,3 +48,10 @@ class Borrow(Document):
     dueDate=DateTimeField()
     createdAt=DateTimeField(default=datetime.utcnow)
     updatedAt=DateTimeField()
+
+
+class RevokedToken(Document):
+    jti=StringField(required=True,unique=True)
+    token_type=StringField(required=True)
+    createdAt=DateTimeField(default=datetime.utcnow)
+    expiresAt=DateTimeField()

@@ -1,21 +1,10 @@
-from flask import Blueprint,request,jsonify,session
-from models import Users,Role,Borrow
+from flask import Blueprint, request, jsonify
+from models import Users, Role, Borrow
 from mongoengine.errors import ValidationError
 from datetime import datetime
+from auth_helpers import get_admin_user
 
-userBp=Blueprint("userBp",__name__)
-
-
-def get_admin_user():
-    current_user = session.get("user")
-    if not current_user:
-        return None, (jsonify({"status":"error","message":"Unauthorized"}),401)
-
-    admin = Users.objects(id=current_user["id"]).first()
-    if not admin or not admin.role or admin.role.name != "admin":
-        return None, (jsonify({"status":"error","message":"Forbidden"}),403)
-
-    return admin, None
+userBp = Blueprint("userBp", __name__)
 
 @userBp.post("/users/insert")
 def create_user():

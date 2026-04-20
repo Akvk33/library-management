@@ -23,6 +23,7 @@ import {
   fetchRoles,
   fetchUsers,
   getPersistedSessionUser,
+  clearAuthStorage,
   login,
   logout,
   payBorrow,
@@ -110,20 +111,28 @@ export default function App() {
       return;
     }
 
-    const currentUser = await fetchCurrentUser();
-    setSessionUser((existingUser) =>
-      existingUser &&
-      existingUser.id === currentUser.id &&
-      existingUser.role === currentUser.role &&
-      existingUser.name === currentUser.name &&
-      existingUser.email === currentUser.email
-        ? existingUser
-        : currentUser
-    );
-    await Promise.all([
-      refreshBorrowData(currentUser),
-      currentUser.role === "admin" ? refreshUsers(currentUser) : Promise.resolve([])
-    ]);
+    try {
+      const currentUser = await fetchCurrentUser();
+      setSessionUser((existingUser) =>
+        existingUser &&
+        existingUser.id === currentUser.id &&
+        existingUser.role === currentUser.role &&
+        existingUser.name === currentUser.name &&
+        existingUser.email === currentUser.email
+          ? existingUser
+          : currentUser
+      );
+      await Promise.all([
+        refreshBorrowData(currentUser),
+        currentUser.role === "admin" ? refreshUsers(currentUser) : Promise.resolve([])
+      ]);
+    } catch (err) {
+      if (err.message === "Unauthorized") {
+        clearAuthStorage();
+        setSessionUser(null);
+      }
+      throw err;
+    }
   }
 
   async function handleLogin(form) {
@@ -261,7 +270,7 @@ export default function App() {
   async function handleAcceptBorrow(borrowId) {
     try {
       const message = await acceptBorrow(borrowId);
-      await refreshBorrowData();
+      await Promise.all([refreshBorrowData(), loadBooks()]);
       setStatus(message);
       await showSuccess("Request accepted", message);
       return message;

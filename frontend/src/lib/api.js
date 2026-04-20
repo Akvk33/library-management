@@ -1,18 +1,77 @@
   const SESSION_USER_KEY = "leafshelf_session_user";
-  const API ="https://library-management-jy5z.onrender.com";
+  const ACCESS_TOKEN_KEY = "leafshelf_access_token";
+  const REFRESH_TOKEN_KEY = "leafshelf_refresh_token";
+  const API = "https://library-management-jy5z.onrender.com";
 
   console.log("ENV:", import.meta.env);
-console.log("API:", import.meta.env.VITE_API_URL);
- 
+  console.log("API:", import.meta.env.VITE_API_URL);
 
-  async function request(path, options = {}) {
-    const response = await fetch(`${API}${path}`, {
-      credentials: "include",
+  function getAccessToken() {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  }
+
+  function getRefreshToken() {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  }
+
+  function persistAccessToken(token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  }
+
+  function persistRefreshToken(token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  }
+
+  function clearAccessToken() {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
+
+  function clearRefreshToken() {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
+  async function refreshToken() {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+
+    const response = await fetch(`${API}/auth/refresh`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(options.headers || {})
+        Authorization: `Bearer ${refreshToken}`
+      }
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      clearAuthStorage();
+      throw new Error(payload?.message || payload?.error || "Unable to refresh token");
+    }
+
+    const accessToken = payload?.data?.access_token;
+    if (!accessToken) {
+      clearAuthStorage();
+      throw new Error("Invalid refresh response");
+    }
+
+    persistAccessToken(accessToken);
+    return accessToken;
+  }
+
+  async function request(path, options = {}) {
+    const token = getAccessToken();
+    const requestOptions = { ...options };
+    delete requestOptions._retry;
+
+    const response = await fetch(`${API}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(requestOptions.headers || {})
       },
-      ...options
+      ...requestOptions
     });
 
     const isJson = response.headers.get("content-type")?.includes("application/json");
@@ -20,6 +79,14 @@ console.log("API:", import.meta.env.VITE_API_URL);
 
     if (!response.ok) {
       const message = payload?.message || payload?.error || "Request failed";
+      if (response.status === 401 && !options._retry) {
+        try {
+          await refreshToken();
+          return request(path, { ...options, _retry: true });
+        } catch (err) {
+          throw new Error(err.message || message);
+        }
+      }
       throw new Error(message);
     }
 
@@ -32,6 +99,8 @@ console.log("API:", import.meta.env.VITE_API_URL);
       body: JSON.stringify(credentials)
     });
 
+    persistAccessToken(payload?.data?.access_token);
+    persistRefreshToken(payload?.data?.refresh_token);
     const user = normalizeAuthUser(payload?.data);
     persistSessionUser(user);
     return user;
@@ -43,6 +112,8 @@ console.log("API:", import.meta.env.VITE_API_URL);
       body: JSON.stringify(data)
     });
 
+    persistAccessToken(payload?.data?.access_token);
+    persistRefreshToken(payload?.data?.refresh_token);
     const user = normalizeAuthUser(payload?.data);
     persistSessionUser(user);
     return user;
@@ -56,8 +127,11 @@ console.log("API:", import.meta.env.VITE_API_URL);
   }
 
   export async function logout() {
-    await request("/auth/logout");
-    clearSessionUser();
+    await request("/auth/logout", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: getRefreshToken() })
+    });
+    clearAuthStorage();
   }
 
   export async function fetchRoles() {
@@ -190,6 +264,11 @@ console.log("API:", import.meta.env.VITE_API_URL);
 
   export function clearSessionUser() {
     localStorage.removeItem(SESSION_USER_KEY);
+  }
+
+  export function clearAuthStorage() {
+    clearAccessToken();
+    clearSessionUser();
   }
 
   function normalizeAuthUser(baseUser) {

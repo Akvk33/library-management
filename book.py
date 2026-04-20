@@ -1,11 +1,13 @@
-from flask import Blueprint,request,jsonify,session
-from models import Users,Books
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import Users, Books
 from mongoengine import ValidationError
 from datetime import datetime
 
-bookBp=Blueprint("bookbp",__name__)
+bookBp = Blueprint("bookbp", __name__)
 
 @bookBp.post("/books/insert")
+@jwt_required()
 def insert_book():
     try:
         data=request.get_json() or {}
@@ -15,14 +17,13 @@ def insert_book():
         price=data.get("price")
         stock=data.get("stock")
 
-        currentUser=session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"status":"error","message":"Unauthorized"}), 401
 
-        if not user or not user.role or user.role.name!="admin":
-            return jsonify({"status":"error","message":"Forbidden"}),403
+        user = Users.objects(id=user_id).first()
+        if not user or not user.role or user.role.name != "admin":
+            return jsonify({"status":"error","message":"Forbidden"}), 403
 
         if not title or not author or price is None or stock is None:
             return jsonify({"status":"error","message":"Missing required fields"}),400
@@ -89,6 +90,7 @@ def get_book(bookId):
         return jsonify({"status":"error","message":f"Error {str(e)}"}),500
     
 @bookBp.put("/books/update/<bookId>")
+@jwt_required()
 def update_book(bookId):
     try:
         try:
@@ -109,16 +111,15 @@ def update_book(bookId):
 
         if not any([title, author, price is not None, stock is not None]):
             return jsonify({"status":"error","message":"No fields to update"}),400
-        
-        currentUser=session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
 
-        if not user or not user.role or user.role.name!="admin":
-            return jsonify({"status":"error","message":"Forbidden"}),403
-        
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"status":"error","message":"Unauthorized"}), 401
+
+        user = Users.objects(id=user_id).first()
+        if not user or not user.role or user.role.name != "admin":
+            return jsonify({"status":"error","message":"Forbidden"}), 403
+
         normalized_title = title.strip() if title else book.title
         normalized_author = author.strip() if author else book.author
 
@@ -159,6 +160,7 @@ def update_book(bookId):
         return jsonify({"status":"error","message":f"Error {str(e)}"}),500
     
 @bookBp.delete("/books/delete/<bookId>")
+@jwt_required()
 def delete_book(bookId):
     try:
         try:
@@ -169,16 +171,15 @@ def delete_book(bookId):
         
         if not book:
             return jsonify({"status":"error","message":"Book not found"}),404
-        
-        currentUser=session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
 
-        if not user or not user.role or user.role.name!="admin":
-            return jsonify({"status":"error","message":"Forbidden"}),403
-        
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"status":"error","message":"Unauthorized"}), 401
+
+        user = Users.objects(id=user_id).first()
+        if not user or not user.role or user.role.name != "admin":
+            return jsonify({"status":"error","message":"Forbidden"}), 403
+
         book.delete()
 
         return jsonify({"status":"success","message":"Book deleted successfully"}),200

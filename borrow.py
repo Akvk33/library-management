@@ -1,9 +1,10 @@
-from flask import Blueprint,request,jsonify,session
-from models import Borrow,Books,Users
+from flask import Blueprint, request, jsonify
+from models import Borrow, Books, Users
 from datetime import datetime, timedelta
 from mongoengine.errors import ValidationError
+from auth_helpers import get_jwt_user, get_librarian_user
 
-borrowBp=Blueprint("borrow",__name__)
+borrowBp = Blueprint("borrow", __name__)
 
 PENDING_EXPIRY_HOURS = 24
 
@@ -76,13 +77,9 @@ def serialize_borrow(borrow):
 @borrowBp.get("/borrows")
 def get_borrows():
     try:
-        currentUser = session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-
-        user = Users.objects(id=currentUser["id"]).first()
+        user = get_jwt_user()
         if not user:
-            return jsonify({"status":"error","message":"User not found"}),404
+            return jsonify({"status":"error","message":"Unauthorized"}),401
 
         borrows = Borrow.objects.order_by("-createdAt")
 
@@ -103,13 +100,9 @@ def get_borrows():
 @borrowBp.get("/borrows/me")
 def get_my_borrows():
     try:
-        currentUser = session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-
-        user = Users.objects(id=currentUser["id"]).first()
+        user = get_jwt_user()
         if not user:
-            return jsonify({"status":"error","message":"User not found"}),404
+            return jsonify({"status":"error","message":"Unauthorized"}),401
 
         borrows = Borrow.objects(user=user).order_by("-createdAt")
         borrow_list = []
@@ -137,11 +130,9 @@ def borrow_book(bookId):
         except (TypeError, ValueError):
             return jsonify({"status":"error","message":"Quantity must be a valid integer"}),400
         
-        currentUser=session.get("user")
-        if not currentUser:
+        user = get_jwt_user()
+        if not user:
             return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
         
         try:
             book=Books.objects(id=bookId).first()
@@ -175,11 +166,9 @@ def borrow_book(bookId):
 @borrowBp.get("/borrow/checkdue/<borrowId>")
 def check_due(borrowId):
     try:
-        currentUser=session.get("user")
-        if not currentUser:
+        user = get_jwt_user()
+        if not user:
             return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
         
         try:
             borrow=Borrow.objects(id=borrowId).first()
@@ -221,14 +210,9 @@ def check_due(borrowId):
 @borrowBp.get("/borrow/accept/<borrowId>")
 def accept_borrow(borrowId):
     try:
-        currentUser=session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-        
-        user=Users.objects(id=currentUser["id"]).first()
-
-        if not user or not user.role or user.role.name!="librarian":
-            return jsonify({"status":"error","message":"Forbidden"}),403
+        user, error_response = get_librarian_user()
+        if error_response:
+            return error_response
         
         try:
             borrow=Borrow.objects(id=borrowId).first()
@@ -280,13 +264,9 @@ def accept_borrow(borrowId):
 @borrowBp.patch("/borrow/reject/<borrowId>")
 def reject_borrow(borrowId):
     try:
-        currentUser=session.get("user")
-        if not currentUser:
-            return jsonify({"status":"error","message":"Unauthorized"}),401
-
-        user=Users.objects(id=currentUser["id"]).first()
-        if not user or not user.role or user.role.name!="librarian":
-            return jsonify({"status":"error","message":"Forbidden"}),403
+        user, error_response = get_librarian_user()
+        if error_response:
+            return error_response
 
         try:
             borrow=Borrow.objects(id=borrowId).first()
@@ -322,12 +302,10 @@ def reject_borrow(borrowId):
 @borrowBp.patch("/borrow/pay/<borrowId>")
 def pay_borrow(borrowId):
     try:
-        currentUser=session.get("user")
-        if not currentUser:
+        user = get_jwt_user()
+        if not user:
             return jsonify({"status":"error","message":"Unauthorized"}),401
         
-        user=Users.objects(id=currentUser["id"]).first()
-
         try:
             borrow=Borrow.objects(id=borrowId).first()
         except ValidationError:
