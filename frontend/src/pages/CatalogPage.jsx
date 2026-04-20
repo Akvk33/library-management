@@ -2,10 +2,16 @@ import { useState } from "react";
 
 export default function CatalogPage({ books, onBorrow, sessionUser }) {
   const [quantities, setQuantities] = useState({});
+  const [borrowing, setBorrowing] = useState({});
 
   async function submitBorrow(bookId) {
     const quantity = Number(quantities[bookId] || 1);
-    await onBorrow(bookId, quantity);
+    setBorrowing((prev) => ({ ...prev, [bookId]: true }));
+    try {
+      await onBorrow(bookId, quantity);
+    } finally {
+      setBorrowing((prev) => ({ ...prev, [bookId]: false }));
+    }
     setQuantities((current) => ({ ...current, [bookId]: 1 }));
   }
 
@@ -37,8 +43,9 @@ export default function CatalogPage({ books, onBorrow, sessionUser }) {
                   }))
                 }
               />
-              <button onClick={() => submitBorrow(book.id)} disabled={!sessionUser || book.stock < 1}>
-                Request
+              <button onClick={() => submitBorrow(book.id)} disabled={!sessionUser || book.stock < 1 || borrowing[book.id]}>
+                {borrowing[book.id] && <span className="spinner"></span>}
+                {borrowing[book.id] ? "Requesting..." : "Request"}
               </button>
             </div>
           </article>

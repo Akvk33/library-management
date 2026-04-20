@@ -1,7 +1,26 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function LibrarianPage({ borrows, onAcceptBorrow, onRejectBorrow }) {
+  const [loading, setLoading] = useState({});
   const pendingBorrows = useMemo(() => borrows.filter((borrow) => borrow.status === "pending"), [borrows]);
+
+  async function handleAccept(borrowId) {
+    setLoading((prev) => ({ ...prev, [`accept-${borrowId}`]: true }));
+    try {
+      await onAcceptBorrow(borrowId);
+    } finally {
+      setLoading((prev) => ({ ...prev, [`accept-${borrowId}`]: false }));
+    }
+  }
+
+  async function handleReject(borrowId) {
+    setLoading((prev) => ({ ...prev, [`reject-${borrowId}`]: true }));
+    try {
+      await onRejectBorrow(borrowId);
+    } finally {
+      setLoading((prev) => ({ ...prev, [`reject-${borrowId}`]: false }));
+    }
+  }
 
   return (
     <section className="page-section">
@@ -23,9 +42,13 @@ export default function LibrarianPage({ borrows, onAcceptBorrow, onRejectBorrow 
               <p>Requested: {formatDate(borrow.createdAt)}</p>
               <p>Auto cancel: {formatDate(borrow.requestExpiresAt)}</p>
               <div className="card-actions split-actions">
-                <button onClick={() => onAcceptBorrow(borrow.id)}>Accept</button>
-                <button className="danger-button" onClick={() => onRejectBorrow(borrow.id)}>
-                  Reject
+                <button onClick={() => handleAccept(borrow.id)} disabled={loading[`accept-${borrow.id}`]}>
+                  {loading[`accept-${borrow.id}`] && <span className="spinner"></span>}
+                  {loading[`accept-${borrow.id}`] ? "Accepting..." : "Accept"}
+                </button>
+                <button className="danger-button" onClick={() => handleReject(borrow.id)} disabled={loading[`reject-${borrow.id}`]}>
+                  {loading[`reject-${borrow.id}`] && <span className="spinner"></span>}
+                  {loading[`reject-${borrow.id}`] ? "Rejecting..." : "Reject"}
                 </button>
               </div>
             </article>

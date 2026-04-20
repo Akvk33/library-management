@@ -81,6 +81,7 @@ export default function AuthPage({ onLogin, onRegister }) {
               />
             </label>
             <button type="submit" disabled={busy === "login"}>
+              {busy === "login" && <span className="spinner"></span>}
               {busy === "login" ? "Signing in..." : "Sign in"}
             </button>
           </form>
@@ -113,6 +114,7 @@ export default function AuthPage({ onLogin, onRegister }) {
               />
             </label>
             <button type="submit" disabled={busy === "register"}>
+              {busy === "register" && <span className="spinner"></span>}
               {busy === "register" ? "Creating account..." : "Create account"}
             </button>
           </form>

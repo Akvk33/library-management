@@ -31,6 +31,8 @@ export default function AdminPage({
   const [editingUserId, setEditingUserId] = useState("");
   const [busyBookId, setBusyBookId] = useState("");
   const [busyUserId, setBusyUserId] = useState("");
+  const [submittingBook, setSubmittingBook] = useState(false);
+  const [submittingUser, setSubmittingUser] = useState(false);
   const roleOptions = useMemo(() => roles.map((role) => role.name), [roles]);
   const bookFormRef = useRef(null);
   const userFormRef = useRef(null);
@@ -41,42 +43,52 @@ export default function AdminPage({
 
   async function submitBook(event) {
     event.preventDefault();
-    const payload = {
-      ...bookForm,
-      price: Number(bookForm.price),
-      stock: Number(bookForm.stock)
-    };
+    setSubmittingBook(true);
+    try {
+      const payload = {
+        ...bookForm,
+        price: Number(bookForm.price),
+        stock: Number(bookForm.stock)
+      };
 
-    if (editingBookId) {
-      await onUpdateBook(editingBookId, payload);
-    } else {
-      await onAddBook(payload);
+      if (editingBookId) {
+        await onUpdateBook(editingBookId, payload);
+      } else {
+        await onAddBook(payload);
+      }
+
+      setBookForm(defaultBookForm);
+      setEditingBookId("");
+    } finally {
+      setSubmittingBook(false);
     }
-
-    setBookForm(defaultBookForm);
-    setEditingBookId("");
   }
 
   async function submitUser(event) {
     event.preventDefault();
-    const payload = {
-      name: userForm.name,
-      email: userForm.email,
-      role: userForm.role
-    };
+    setSubmittingUser(true);
+    try {
+      const payload = {
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role
+      };
 
-    if (userForm.password.trim()) {
-      payload.password = userForm.password;
+      if (userForm.password.trim()) {
+        payload.password = userForm.password;
+      }
+
+      if (editingUserId) {
+        await onUpdateUser(editingUserId, payload);
+      } else {
+        await onCreateUser({ ...payload, password: userForm.password });
+      }
+
+      setUserForm(defaultUserForm);
+      setEditingUserId("");
+    } finally {
+      setSubmittingUser(false);
     }
-
-    if (editingUserId) {
-      await onUpdateUser(editingUserId, payload);
-    } else {
-      await onCreateUser({ ...payload, password: userForm.password });
-    }
-
-    setUserForm(defaultUserForm);
-    setEditingUserId("");
   }
 
   function startEditBook(book) {
@@ -179,7 +191,10 @@ export default function AdminPage({
               Stock
               <input type="number" min="0" step="1" value={bookForm.stock} onChange={(event) => setBookForm({ ...bookForm, stock: event.target.value })} />
             </label>
-            <button type="submit">{editingBookId ? "Save Book" : "Add Book"}</button>
+            <button type="submit" disabled={submittingBook}>
+              {submittingBook && <span className="spinner"></span>}
+              {submittingBook ? "Saving..." : (editingBookId ? "Save Book" : "Add Book")}
+            </button>
           </form>
         </article>
 
@@ -218,7 +233,10 @@ export default function AdminPage({
                 ))}
               </select>
             </label>
-            <button type="submit">{editingUserId ? "Save User" : "Add User"}</button>
+            <button type="submit" disabled={submittingUser}>
+              {submittingUser && <span className="spinner"></span>}
+              {submittingUser ? "Saving..." : (editingUserId ? "Save User" : "Add User")}
+            </button>
           </form>
         </article>
       </div>
@@ -264,6 +282,7 @@ export default function AdminPage({
                     Edit
                   </button>
                   <button className="danger-button table-action-button" onClick={() => removeUser(user.id)} disabled={busyUserId === user.id}>
+                    {busyUserId === user.id && <span className="spinner"></span>}
                     {busyUserId === user.id ? "Working..." : "Delete"}
                   </button>
                 </div>
@@ -302,6 +321,7 @@ export default function AdminPage({
                     Edit
                   </button>
                   <button className="danger-button table-action-button" onClick={() => removeBook(book.id)} disabled={busyBookId === book.id}>
+                    {busyBookId === book.id && <span className="spinner"></span>}
                     {busyBookId === book.id ? "Deleting..." : "Delete"}
                   </button>
                 </div>
