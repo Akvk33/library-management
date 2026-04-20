@@ -3,7 +3,6 @@ import { showInfo } from "../lib/alerts";
 
 export default function MyBorrowsPage({ borrows, onCheckDue, onPayBorrow }) {
   const [loading, setLoading] = useState({});
-  const [loading, setLoading] = useState({});
 
   async function handleCheckDue(borrowId) {
     setLoading((prev) => ({ ...prev, [`check-${borrowId}`]: true }));
